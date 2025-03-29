@@ -162,19 +162,25 @@ def calc_index(node, P):
     return (node.y - P.miny) * P.xw + (node.x - P.minx)
 
 
+# ox, oy: 经过归一化后的障碍物坐标
 def calc_parameters(ox, oy, rr, reso):
     minx, miny = round(min(ox)), round(min(oy))
+    print(f"minx = {minx}, miny = {miny}")  # 0, 0
     maxx, maxy = round(max(ox)), round(max(oy))
+    print(f"maxx = {maxx}, maxy = {maxy}")  # 25, 15
     xw, yw = maxx - minx, maxy - miny
+    print(f"xw = {xw}, yw = {yw}")
 
     motion = get_motion()
     P = Para(minx, miny, maxx, maxy, xw, yw, reso, motion)
-    obsmap = calc_obsmap(ox, oy, rr, P)
+    obsmap = calc_obsmap(ox, oy, rr, P) # rr = 1.0
 
     return P, obsmap
 
 
 def calc_obsmap(ox, oy, rr, P):
+    # _ 只是一个占位符，表示我们不关心具体索引
+    # 得到的obsmap是一个P.yw行，P.xw列的矩阵，每个元素的值都是False
     obsmap = [[False for _ in range(P.yw)] for _ in range(P.xw)]
 
     for x in range(P.xw):
@@ -182,9 +188,15 @@ def calc_obsmap(ox, oy, rr, P):
         for y in range(P.yw):
             yy = y + P.miny
             for oxx, oyy in zip(ox, oy):
+                # rr=1.0 表示机器人半径
                 if math.hypot(oxx - xx, oyy - yy) <= rr / P.reso:
                     obsmap[x][y] = True
                     break
+    
+    # for row in obsmap:
+    #     for item in row:
+    #         print(item, end=" ")
+    #     print()
 
     return obsmap
 

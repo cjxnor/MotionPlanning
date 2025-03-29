@@ -11,7 +11,10 @@ from heapdict import heapdict
 import time
 import numpy as np
 import matplotlib.pyplot as plt
-import scipy.spatial.kdtree as kd
+# `scipy.spatial.kdtree` namespace is deprecated and will be removed in SciPy 2.0.0.
+# import scipy.spatial.kdtree as kd
+import scipy.spatial as kd
+
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)) +
                 "/../../MotionPlanning/")
@@ -106,14 +109,18 @@ class QueuePrior:
 
 
 def hybrid_astar_planning(sx, sy, syaw, gx, gy, gyaw, ox, oy, xyreso, yawreso):
+    # round:四舍五入，默认保留0位小数
     sxr, syr = round(sx / xyreso), round(sy / xyreso)
     gxr, gyr = round(gx / xyreso), round(gy / xyreso)
+    # rs.pi_2_pi 将角度限制在[-pi, pi]区间内
     syawr = round(rs.pi_2_pi(syaw) / yawreso)
     gyawr = round(rs.pi_2_pi(gyaw) / yawreso)
 
     nstart = Node(sxr, syr, syawr, 1, [sx], [sy], [syaw], [1], 0.0, 0.0, -1)
     ngoal = Node(gxr, gyr, gyawr, 1, [gx], [gy], [gyaw], [1], 0.0, 0.0, -1)
 
+    # zip() 用于将多个可迭代对象（列表、元组等）“打包”成一个迭代器
+    # KDTree 适用于低维空间的最近邻搜索
     kdtree = kd.KDTree([[x, y] for x, y in zip(ox, oy)])
     P = calc_parameters(ox, oy, xyreso, yawreso, kdtree)
 
@@ -460,6 +467,7 @@ def draw_car(x, y, yaw, steer, color='black'):
 def design_obstacles(x, y):
     ox, oy = [], []
 
+    # range(x) 生成0到x-1的整数序列
     for i in range(x):
         ox.append(i)
         oy.append(0)
@@ -485,13 +493,17 @@ def design_obstacles(x, y):
         ox.append(40)
         oy.append(i)
 
+    # print(ox)
+    # print(oy)
     return ox, oy
 
 
 def main():
     print("start!")
     x, y = 51, 31
+    # 起点位置、航向角
     sx, sy, syaw0 = 10.0, 7.0, np.deg2rad(120.0)
+    # 终点位置、航向角
     gx, gy, gyaw0 = 45.0, 20.0, np.deg2rad(90.0)
 
     ox, oy = design_obstacles(x, y)
@@ -513,6 +525,7 @@ def main():
 
     for k in range(len(x)):
         plt.cla()
+        # s：表示方形（square）标记 🔲，k：表示黑色（black）
         plt.plot(ox, oy, "sk")
         plt.plot(x, y, linewidth=1.5, color='r')
 
@@ -532,5 +545,6 @@ def main():
     print("Done!")
 
 
+# 保证脚本作为主程序运行时main()才会被执行，而在模块被导入时不会执行
 if __name__ == '__main__':
     main()
