@@ -34,14 +34,14 @@ class C:  # Parameter config
     COLLISION_CHECK_STEP = 5  # skip number for collision check
     EXTEND_BOUND = 1  # collision check range extended
 
-    GEAR_COST = 100.0  # switch back penalty cost
+    GEAR_COST = 100.0  # switch back penalty cost 挡位切换的代价
     BACKWARD_COST = 5.0  # backward penalty cost
     STEER_CHANGE_COST = 5.0  # steer angle change penalty cost
     STEER_ANGLE_COST = 1.0  # steer angle penalty cost
     H_COST = 15.0  # Heuristic cost penalty cost
 
-    RF = 4.5  # [m] distance from rear to vehicle front end of vehicle
-    RB = 1.0  # [m] distance from rear to vehicle back end of vehicle
+    RF = 4.5  # [m] distance from rear to vehicle front end of vehicle  后轴中心到车头的距离
+    RB = 1.0  # [m] distance from rear to vehicle back end of vehicle   后轴中心到车尾的距离
     W = 3.0  # [m] width of vehicle
     WD = 0.7 * W  # [m] distance between left-right wheels
     WB = 3.5  # [m] Wheel base
@@ -96,6 +96,7 @@ class Path:
 
 class QueuePrior:
     def __init__(self):
+        # 创建堆字典
         self.queue = heapdict()
 
     def empty(self):
@@ -105,6 +106,7 @@ class QueuePrior:
         self.queue[item] = priority  # push 
 
     def get(self):
+        # 取出最小值（自动维护堆结构）
         return self.queue.popitem()[0]  # pop out element with smallest priority
 
 
@@ -135,7 +137,7 @@ def hybrid_astar_planning(sx, sy, syaw, gx, gy, gyaw, ox, oy, xyreso, yawreso):
         if not open_set:
             return None
 
-        ind = qp.get()
+        ind = qp.get()  # 去除最小priority的值
         n_curr = open_set[ind]
         closed_set[ind] = n_curr
         open_set.pop(ind)
@@ -165,6 +167,7 @@ def hybrid_astar_planning(sx, sy, syaw, gx, gy, gyaw, ox, oy, xyreso, yawreso):
                     open_set[node_ind] = node
                     qp.put(node_ind, calc_hybrid_cost(node, hmap, P))
 
+    # fnode在while内定义，可以在 while 外部访问，因为 Python 没有块级作用域，只有函数级作用域
     return extract_path(closed_set, fnode, nstart)
 
 
@@ -284,7 +287,7 @@ def analystic_expantion(node, ngoal, P):
     sx, sy, syaw = node.x[-1], node.y[-1], node.yaw[-1]
     gx, gy, gyaw = ngoal.x[-1], ngoal.y[-1], ngoal.yaw[-1]
 
-    maxc = math.tan(C.MAX_STEER) / C.WB
+    maxc = math.tan(C.MAX_STEER) / C.WB     # 最大曲率
     paths = rs.calc_all_paths(sx, sy, syaw, gx, gy, gyaw, maxc, step_size=C.MOVE_STEP)
 
     if not paths:
@@ -296,13 +299,13 @@ def analystic_expantion(node, ngoal, P):
 
     while not pq.empty():
         path = pq.get()
-        ind = range(0, len(path.x), C.COLLISION_CHECK_STEP)
+        ind = range(0, len(path.x), C.COLLISION_CHECK_STEP)     # COLLISION_CHECK_STEP = 5
 
         pathx = [path.x[k] for k in ind]
         pathy = [path.y[k] for k in ind]
         pathyaw = [path.yaw[k] for k in ind]
 
-        if not is_collision(pathx, pathy, pathyaw, P):
+        if not is_collision(pathx, pathy, pathyaw, P):  # 每隔5个点检测一次碰撞
             return path
 
     return None
@@ -310,14 +313,14 @@ def analystic_expantion(node, ngoal, P):
 
 def is_collision(x, y, yaw, P):
     for ix, iy, iyaw in zip(x, y, yaw):
-        d = 1
-        dl = (C.RF - C.RB) / 2.0
-        r = (C.RF + C.RB) / 2.0 + d
+        d = 1   # 表示额外的碰撞缓冲区域
+        dl = (C.RF - C.RB) / 2.0    # 后轴中心到车辆中心的距离
+        r = (C.RF + C.RB) / 2.0 + d # 车长的一半 + d
 
-        cx = ix + dl * math.cos(iyaw)
+        cx = ix + dl * math.cos(iyaw)   # 通过后轴中心点计算车辆中心点的坐标
         cy = iy + dl * math.sin(iyaw)
 
-        ids = P.kdtree.query_ball_point([cx, cy], r)
+        ids = P.kdtree.query_ball_point([cx, cy], r)    # 用于查找在给定半径内的所有邻居点
 
         if not ids:
             continue
@@ -325,10 +328,10 @@ def is_collision(x, y, yaw, P):
         for i in ids:
             xo = P.ox[i] - cx
             yo = P.oy[i] - cy
-            dx = xo * math.cos(iyaw) + yo * math.sin(iyaw)
+            dx = xo * math.cos(iyaw) + yo * math.sin(iyaw)  # 转换到车辆坐标系
             dy = -xo * math.sin(iyaw) + yo * math.cos(iyaw)
 
-            if abs(dx) < r and abs(dy) < C.W / 2 + d:
+            if abs(dx) < r and abs(dy) < C.W / 2 + d:   # W 车宽
                 return True
 
     return False
@@ -341,15 +344,15 @@ def calc_rs_path_cost(rspath):
         if lr >= 0:
             cost += 1
         else:
-            cost += abs(lr) * C.BACKWARD_COST
+            cost += abs(lr) * C.BACKWARD_COST   # 倒车代价
 
     for i in range(len(rspath.lengths) - 1):
         if rspath.lengths[i] * rspath.lengths[i + 1] < 0.0:
-            cost += C.GEAR_COST
+            cost += C.GEAR_COST     # 挡位切换代价 （前进、倒车切换）
 
     for ctype in rspath.ctypes:
         if ctype != "S":
-            cost += C.STEER_ANGLE_COST * abs(C.MAX_STEER)
+            cost += C.STEER_ANGLE_COST * abs(C.MAX_STEER)   # 曲线代价
 
     nctypes = len(rspath.ctypes)
     ulist = [0.0 for _ in range(nctypes)]
@@ -361,7 +364,7 @@ def calc_rs_path_cost(rspath):
             ulist[i] = C.MAX_STEER
 
     for i in range(nctypes - 1):
-        cost += C.STEER_CHANGE_COST * abs(ulist[i + 1] - ulist[i])
+        cost += C.STEER_CHANGE_COST * abs(ulist[i + 1] - ulist[i])      # 方向盘转动代价（L、R切换）
 
     return cost
 
@@ -374,11 +377,16 @@ def calc_hybrid_cost(node, hmap, P):
 
 
 def calc_motion_set():
+    # 从C.MAX_STEER / C.N_STEER 到 C.MAX_STEER，步长为 C.MAX_STEER / C.N_STEER
     s = np.arange(C.MAX_STEER / C.N_STEER,
                   C.MAX_STEER, C.MAX_STEER / C.N_STEER)
+    # print(f"s : {s}")
 
+    # list 列表拼接
     steer = list(s) + [0.0] + list(-s)
+    # print(f"steer : {steer}")
     direc = [1.0 for _ in range(len(steer))] + [-1.0 for _ in range(len(steer))]
+    # 拼接两个steer，一个前进，一个后退
     steer = steer + steer
 
     return steer, direc

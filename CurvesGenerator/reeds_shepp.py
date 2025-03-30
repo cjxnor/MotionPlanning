@@ -27,6 +27,7 @@ def calc_optimal_path(sx, sy, syaw, gx, gy, gyaw, maxc, step_size=STEP_SIZE):
     minL = paths[0].L
     mini = 0
 
+    # 取最短的
     for i in range(len(paths)):
         if paths[i].L <= minL:
             minL, mini = paths[i].L, i
@@ -42,10 +43,10 @@ def calc_all_paths(sx, sy, syaw, gx, gy, gyaw, maxc, step_size=STEP_SIZE):
 
     for path in paths:
         x, y, yaw, directions = \
-            generate_local_course(path.L, path.lengths,
+            generate_local_course(path.L, path.lengths,     # L是路径总长
                                   path.ctypes, maxc, step_size * maxc)
 
-        # convert global coordinate
+        # convert global coordinate 坐标系转换
         path.x = [math.cos(-q0[2]) * ix + math.sin(-q0[2]) * iy + q0[0] for (ix, iy) in zip(x, y)]
         path.y = [-math.sin(-q0[2]) * ix + math.cos(-q0[2]) * iy + q0[1] for (ix, iy) in zip(x, y)]
         path.yaw = [pi_2_pi(iyaw + q0[2]) for iyaw in yaw]
@@ -67,7 +68,7 @@ def set_path(paths, lengths, ctypes):
             if sum([x - y for x, y in zip(path_e.lengths, path.lengths)]) <= 0.01:
                 return paths  # not insert path
 
-    path.L = sum([abs(i) for i in lengths])
+    path.L = sum([abs(i) for i in lengths]) # lengths为负表示倒车，L是取绝对值后的总长
 
     if path.L >= MAX_LENGTH:
         return paths
@@ -123,7 +124,7 @@ def SCS(x, y, phi, paths):
     flag, t, u, v = SLS(x, y, phi)
 
     if flag:
-        paths = set_path(paths, [t, u, v], ["S", "WB", "S"])
+        paths = set_path(paths, [t, u, v], ["S", "WB", "S"])    # WB 代表左转
 
     flag, t, u, v = SLS(x, -y, -phi)
     if flag:
@@ -140,6 +141,7 @@ def SLS(x, y, phi):
         t = xd - math.tan(phi / 2.0)
         u = phi
         v = math.sqrt((x - xd) ** 2 + y ** 2) - math.tan(phi / 2.0)
+        # t,u,v分别是第一，二，三段的路径长度，负的表示倒车
         return True, t, u, v
     elif y < 0.0 and 0.0 < phi < PI * 0.99:
         xd = -y / math.tan(phi) + x
@@ -374,7 +376,7 @@ def CCSC(x, y, phi, paths):
     if flag:
         paths = set_path(paths, [-t, 0.5 * PI, -u, -v], ["R", "WB", "S", "WB"])
 
-    # backwards
+    # backwards 原路径的逆序
     xb = x * math.cos(phi) + y * math.sin(phi)
     yb = x * math.sin(phi) - y * math.cos(phi)
 
@@ -450,7 +452,8 @@ def CCSCC(x, y, phi, paths):
 
     return paths
 
-
+# L是路径总长，lengths 是各段路径的长度，mode : path.ctypes，step_size = 0.2*maxc
+# 返回路径中各点x,y,yaw坐标，direction表示路径中个点的运动方向，1表示前进，-1表示后退
 def generate_local_course(L, lengths, mode, maxc, step_size):
     point_num = int(L / step_size) + len(lengths) + 3
 
@@ -460,7 +463,7 @@ def generate_local_course(L, lengths, mode, maxc, step_size):
     directions = [0 for _ in range(point_num)]
     ind = 1
 
-    if lengths[0] > 0.0:
+    if lengths[0] > 0.0:    # 第一段的长度
         directions[0] = 1
     else:
         directions[0] = -1
@@ -481,7 +484,7 @@ def generate_local_course(L, lengths, mode, maxc, step_size):
         ox, oy, oyaw = px[ind], py[ind], pyaw[ind]
 
         ind -= 1
-        if i >= 1 and (lengths[i - 1] * lengths[i]) > 0:
+        if i >= 1 and (lengths[i - 1] * lengths[i]) > 0:    
             pd = -d - ll
         else:
             pd = d - ll
@@ -512,7 +515,7 @@ def generate_local_course(L, lengths, mode, maxc, step_size):
 
 
 def interpolate(ind, l, m, maxc, ox, oy, oyaw, px, py, pyaw, directions):
-    if m == "S":
+    if m == "S":    # 直线
         px[ind] = ox + l / maxc * math.cos(oyaw)
         py[ind] = oy + l / maxc * math.sin(oyaw)
         pyaw[ind] = oyaw
@@ -551,9 +554,9 @@ def generate_path(q0, q1, maxc):
     y = (-s * dx + c * dy) * maxc
 
     paths = []
-    paths = SCS(x, y, dth, paths)
-    paths = CSC(x, y, dth, paths)
-    paths = CCC(x, y, dth, paths)
+    paths = SCS(x, y, dth, paths)       # 直线-曲线-直线
+    paths = CSC(x, y, dth, paths)       # 曲线-直线-曲线
+    paths = CCC(x, y, dth, paths)       # 曲线-曲线-曲线
     paths = CCCC(x, y, dth, paths)
     paths = CCSC(x, y, dth, paths)
     paths = CCSCC(x, y, dth, paths)

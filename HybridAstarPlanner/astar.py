@@ -2,6 +2,7 @@ import heapq
 import math
 import numpy as np
 import matplotlib.pyplot as plt
+import draw_map
 
 
 class Node:
@@ -78,6 +79,7 @@ def astar_planning(sx, sy, gx, gy, ox, oy, reso, rr):
                         open_set[n_ind].pind = ind
                 else:
                     open_set[n_ind] = node
+                    # heapq应该是以元组的第一个元素来进行
                     heapq.heappush(q_priority,
                                    (fvalue(node, n_goal), calc_index(node, P)))
 
@@ -129,9 +131,11 @@ def calc_holonomic_heuristic_with_obstacle(node, ox, oy, reso, rr):
 
     hmap = [[np.inf for _ in range(P.yw)] for _ in range(P.xw)]
 
+    # dict().values()获取所有的值，但不包含键
     for n in closed_set.values():
         hmap[n.x - P.minx][n.y - P.miny] = n.cost
 
+    # print(f"closed_set size : {len(closed_set)}")
     return hmap
 
 
@@ -190,14 +194,16 @@ def calc_obsmap(ox, oy, rr, P):
             for oxx, oyy in zip(ox, oy):
                 # rr=1.0 表示机器人半径
                 if math.hypot(oxx - xx, oyy - yy) <= rr / P.reso:
+                    # True表示有障碍物
                     obsmap[x][y] = True
                     break
     
-    # for row in obsmap:
+    # for row in obsmap_v:
     #     for item in row:
     #         print(item, end=" ")
     #     print()
 
+    # draw_map.plot_grid(obsmap)
     return obsmap
 
 
