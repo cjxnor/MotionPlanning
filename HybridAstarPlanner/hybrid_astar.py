@@ -172,7 +172,7 @@ def hybrid_astar_planning(sx, sy, syaw, gx, gy, gyaw, ox, oy, xyreso, yawreso):
 
 
 def extract_path(closed, ngoal, nstart):
-    rx, ry, ryaw, direc = [], [], [], []
+    rx, ry, ryaw, direc = [], [], [], []    # yaw和direc有什么区别？
     cost = 0.0
     node = ngoal
 
@@ -188,6 +188,7 @@ def extract_path(closed, ngoal, nstart):
 
         node = closed[node.pind]
 
+    # rx的倒序
     rx = rx[::-1]
     ry = ry[::-1]
     ryaw = ryaw[::-1]
@@ -446,6 +447,7 @@ def draw_car(x, y, yaw, steer, color='black'):
     frWheel = np.dot(Rot2, frWheel)
     flWheel = np.dot(Rot2, flWheel)
 
+    # 四个轮子相对于后轴中心的位置
     frWheel += np.array([[C.WB], [-C.WD / 2]])
     flWheel += np.array([[C.WB], [C.WD / 2]])
     rrWheel[1, :] -= C.WD / 2
@@ -532,14 +534,16 @@ def main():
     direction = path.direction
 
     for k in range(len(x)):
+        # plt.cla() 主要用于清除当前子图（axes）中的所有元素（如线条、标签、刻度等），但不会删除整个图像窗口
         plt.cla()
         # s：表示方形（square）标记 🔲，k：表示黑色（black）
         plt.plot(ox, oy, "sk")
         plt.plot(x, y, linewidth=1.5, color='r')
 
         if k < len(x) - 2:
-            dy = (yaw[k + 1] - yaw[k]) / C.MOVE_STEP
-            steer = rs.pi_2_pi(math.atan(-C.WB * dy / direction[k]))
+            # 弧长 = 圆心角 * 半径
+            dy = (yaw[k + 1] - yaw[k]) / C.MOVE_STEP    # MOVE_STEP = 0.4
+            steer = rs.pi_2_pi(math.atan(-C.WB * dy / direction[k]))    # WB = 3.5
         else:
             steer = 0.0
 
