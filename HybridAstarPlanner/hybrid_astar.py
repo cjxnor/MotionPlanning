@@ -40,14 +40,14 @@ class C:  # Parameter config
     STEER_ANGLE_COST = 1.0  # steer angle penalty cost
     H_COST = 15.0  # Heuristic cost penalty cost
 
-    RF = 4.5  # [m] distance from rear to vehicle front end of vehicle  后轴中心到车头的距离
-    RB = 1.0  # [m] distance from rear to vehicle back end of vehicle   后轴中心到车尾的距离
-    W = 3.0  # [m] width of vehicle
+    RF = 3.713  # [m] distance from rear to vehicle front end of vehicle  后轴中心到车头的距离
+    RB = 0.961  # [m] distance from rear to vehicle back end of vehicle   后轴中心到车尾的距离
+    W = 0.965 * 2  # [m] width of vehicle
     WD = 0.7 * W  # [m] distance between left-right wheels
-    WB = 3.5  # [m] Wheel base
-    TR = 0.5  # [m] Tyre radius
-    TW = 1  # [m] Tyre width
-    MAX_STEER = 0.6  # [rad] maximum steering angle
+    WB = 2.716  # [m] Wheel base
+    TR = 0.35  # [m] Tyre radius
+    TW = 0.3  # [m] Tyre width
+    MAX_STEER = 8.3/15  # [rad] maximum steering angle
 
 
 class Node:
@@ -62,6 +62,7 @@ class Node:
         self.yaw = yaw
         self.directions = directions
         self.steer = steer
+        # 起点到当前node的cost
         self.cost = cost
         self.pind = pind
 
@@ -96,7 +97,7 @@ class Path:
 
 class QueuePrior:
     def __init__(self):
-        # 创建堆字典
+        # 创建堆字典，Python的heapq最小堆的实现只能存储数值列表，而heapdict允许存储键值对
         self.queue = heapdict()
 
     def empty(self):
@@ -106,10 +107,10 @@ class QueuePrior:
         self.queue[item] = priority  # push 
 
     def get(self):
-        # 取出最小值（自动维护堆结构）
+        # 取出最小值（自动维护堆结构），弹出的最小值从queue中删除，popitem()[0]表示获取键（key）,而忽略值(value)
         return self.queue.popitem()[0]  # pop out element with smallest priority
 
-
+fnode = []
 def hybrid_astar_planning(sx, sy, syaw, gx, gy, gyaw, ox, oy, xyreso, yawreso):
     # round:四舍五入，默认保留0位小数
     sxr, syr = round(sx / xyreso), round(sy / xyreso)
@@ -137,7 +138,7 @@ def hybrid_astar_planning(sx, sy, syaw, gx, gy, gyaw, ox, oy, xyreso, yawreso):
         if not open_set:
             return None
 
-        ind = qp.get()  # 去除最小priority的值
+        ind = qp.get()  # 获取最小priority的值对应的index
         n_curr = open_set[ind]
         closed_set[ind] = n_curr
         open_set.pop(ind)
@@ -145,7 +146,10 @@ def hybrid_astar_planning(sx, sy, syaw, gx, gy, gyaw, ox, oy, xyreso, yawreso):
         update, fpath = update_node_with_analystic_expantion(n_curr, ngoal, P)
 
         if update:
+            global fnode
             fnode = fpath
+            # plt.scatter(fnode.x[0], fnode.y[0], color='black', s=200)
+            # print(f"fnode.x = {fnode.x[0]}, fnode.y = {fnode.y[0]}")
             break
 
         for i in range(len(steer_set)):
@@ -200,9 +204,11 @@ def extract_path(closed, ngoal, nstart):
     return path
 
 
+# u：steer，d：direction
 def calc_next_node(n_curr, c_id, u, d, P):
     step = C.XY_RESO * 2
 
+    # ceil()向上取整，MOVE_STEP = 0.4
     nlist = math.ceil(step / C.MOVE_STEP)
     xlist = [n_curr.x[-1] + d * C.MOVE_STEP * math.cos(n_curr.yaw[-1])]
     ylist = [n_curr.y[-1] + d * C.MOVE_STEP * math.sin(n_curr.yaw[-1])]
@@ -213,6 +219,7 @@ def calc_next_node(n_curr, c_id, u, d, P):
         ylist.append(ylist[i] + d * C.MOVE_STEP * math.sin(yawlist[i]))
         yawlist.append(rs.pi_2_pi(yawlist[i] + d * C.MOVE_STEP / C.WB * math.tan(u)))
 
+    # 最后一个点的index
     xind = round(xlist[-1] / P.xyreso)
     yind = round(ylist[-1] / P.xyreso)
     yawind = round(yawlist[-1] / P.yawreso)
@@ -220,6 +227,7 @@ def calc_next_node(n_curr, c_id, u, d, P):
     if not is_index_ok(xind, yind, xlist, ylist, yawlist, P):
         return None
 
+    # 起点到当前node的cost
     cost = 0.0
 
     if d > 0:
@@ -307,6 +315,8 @@ def analystic_expantion(node, ngoal, P):
         pathyaw = [path.yaw[k] for k in ind]
 
         if not is_collision(pathx, pathy, pathyaw, P):  # 每隔5个点检测一次碰撞
+            # 打印RS曲线类型
+            print(f"path type : {path.ctypes}")
             return path
 
     return None
@@ -378,7 +388,7 @@ def calc_hybrid_cost(node, hmap, P):
 
 
 def calc_motion_set():
-    # 从C.MAX_STEER / C.N_STEER 到 C.MAX_STEER，步长为 C.MAX_STEER / C.N_STEER
+    # 从C.MAX_STEER / C.N_STEER 到 C.MAX_STEER，步长为 C.MAX_STEER / C.N_STEER，N_STEER = 20.0
     s = np.arange(C.MAX_STEER / C.N_STEER,
                   C.MAX_STEER, C.MAX_STEER / C.N_STEER)
     # print(f"s : {s}")
@@ -427,9 +437,10 @@ def calc_parameters(ox, oy, xyreso, yawreso, kdtree):
 
 
 def draw_car(x, y, yaw, steer, color='black'):
+    # 用于画车
     car = np.array([[-C.RB, -C.RB, C.RF, C.RF, -C.RB],
                     [C.W / 2, -C.W / 2, -C.W / 2, C.W / 2, C.W / 2]])
-
+    # 用于画车轮
     wheel = np.array([[-C.TR, -C.TR, C.TR, C.TR, -C.TR],
                       [C.TW / 4, -C.TW / 4, -C.TW / 4, C.TW / 4, C.TW / 4]])
 
@@ -438,9 +449,11 @@ def draw_car(x, y, yaw, steer, color='black'):
     frWheel = wheel.copy()
     flWheel = wheel.copy()
 
+    # 车辆旋转矩阵  正的yaw逆时针转，负的yaw顺时针转
     Rot1 = np.array([[math.cos(yaw), -math.sin(yaw)],
                      [math.sin(yaw), math.cos(yaw)]])
 
+    # 前轮旋转矩阵 正的steer顺时针转，负的steer逆时针转
     Rot2 = np.array([[math.cos(steer), math.sin(steer)],
                      [-math.sin(steer), math.cos(steer)]])
 
@@ -460,6 +473,7 @@ def draw_car(x, y, yaw, steer, color='black'):
     rlWheel = np.dot(Rot1, rlWheel)
     car = np.dot(Rot1, car)
 
+    # 加上车辆后轴中心的坐标
     frWheel += np.array([[x], [y]])
     flWheel += np.array([[x], [y]])
     rrWheel += np.array([[x], [y]])
@@ -539,6 +553,10 @@ def main():
         # s：表示方形（square）标记 🔲，k：表示黑色（black）
         plt.plot(ox, oy, "sk")
         plt.plot(x, y, linewidth=1.5, color='r')
+        global fnode
+        if fnode:
+            # print(f"fnode.x = {fnode.x[0]}, fnode.y = {fnode.y[0]}")
+            plt.scatter(fnode.x[0], fnode.y[0], color='black', s=100)
 
         if k < len(x) - 2:
             # 弧长 = 圆心角 * 半径
