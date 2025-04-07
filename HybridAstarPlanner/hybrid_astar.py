@@ -393,7 +393,7 @@ def calc_motion_set():
                   C.MAX_STEER, C.MAX_STEER / C.N_STEER)
     # print(f"s : {s}")
 
-    # list 列表拼接
+    # list 列表拼接 len(steer) = 41
     steer = list(s) + [0.0] + list(-s)
     # print(f"steer : {steer}")
     direc = [1.0 for _ in range(len(steer))] + [-1.0 for _ in range(len(steer))]
@@ -555,6 +555,7 @@ def main():
         plt.plot(x, y, linewidth=1.5, color='r')
         global fnode
         if fnode:
+            # 画出RS曲线起点
             # print(f"fnode.x = {fnode.x[0]}, fnode.y = {fnode.y[0]}")
             plt.scatter(fnode.x[0], fnode.y[0], color='black', s=100)
 

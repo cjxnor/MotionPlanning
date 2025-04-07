@@ -89,6 +89,8 @@ def astar_planning(sx, sy, gx, gy, ox, oy, reso, rr):
 
 
 def calc_holonomic_heuristic_with_obstacle(node, ox, oy, reso, rr):
+    # node是hybrid_astar.py中的Node类，node.x保存了一串点
+    # (x, y, cost, parent)
     n_goal = Node(round(node.x[-1] / reso), round(node.y[-1] / reso), 0.0, -1)
 
     ox = [x / reso for x in ox]
@@ -175,6 +177,7 @@ def calc_parameters(ox, oy, rr, reso):
     xw, yw = maxx - minx, maxy - miny
     print(f"xw = {xw}, yw = {yw}")
 
+    # A*算法扩展节点的8个方向
     motion = get_motion()
     P = Para(minx, miny, maxx, maxy, xw, yw, reso, motion)
     obsmap = calc_obsmap(ox, oy, rr, P) # rr = 1.0
