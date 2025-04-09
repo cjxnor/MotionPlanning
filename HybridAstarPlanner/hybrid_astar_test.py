@@ -27,7 +27,7 @@ import CurvesGenerator.reeds_shepp as rs
 class C:  # Parameter config
     PI = math.pi
 
-    XY_RESO = 2.0  # [m]
+    XY_RESO = 0.25  # [m]
     YAW_RESO = np.deg2rad(15.0)  # [rad]
     MOVE_STEP = 0.4  # [m] path interporate resolution
     N_STEER = 20.0  # steer command number
@@ -321,7 +321,7 @@ def analystic_expantion(node, ngoal, P):
 
         if not is_collision(pathx, pathy, pathyaw, P):  # 每隔5个点检测一次碰撞
             # 打印RS曲线类型
-            print(f"path type : {path.ctypes}")
+            print(f"path type : {path.ctypes} len : {path.lengths}")
             return path
 
     return None
@@ -499,29 +499,55 @@ def design_obstacles(x, y):
     ox, oy = [], []
 
     # range(x) 生成0到x-1的整数序列
-    for i in range(x):
+    # for i in range(x):
+    #     ox.append(i)
+    #     oy.append(0)
+    # for i in range(x):
+    #     ox.append(i)
+    #     oy.append(y - 1)
+    # for i in range(y):
+    #     ox.append(0)
+    #     oy.append(i)
+    # for i in range(y):
+    #     ox.append(x - 1)
+    #     oy.append(i)
+    # for i in range(10, 21):
+    #     ox.append(i)
+    #     oy.append(15)
+    # for i in range(15):
+    #     ox.append(20)
+    #     oy.append(i)
+    # for i in range(15, 30):
+    #     ox.append(30)
+    #     oy.append(i)
+    # for i in range(16):
+    #     ox.append(40)
+    #     oy.append(i)
+
+    # 垂直车位
+    for i in range(0, 9):
+        ox.append(i)
+        oy.append(5)
+    for i in range(5, -1, -1):
+        ox.append(8)
+        oy.append(i)
+    for i in range(8, 13):
         ox.append(i)
         oy.append(0)
-    for i in range(x):
-        ox.append(i)
-        oy.append(y - 1)
-    for i in range(y):
-        ox.append(0)
+    for i in range(0, 6):
+        ox.append(12)
         oy.append(i)
-    for i in range(y):
+    for i in range(12, x):
+        ox.append(i)
+        oy.append(5)
+    for i in range(5, y):
         ox.append(x - 1)
         oy.append(i)
-    for i in range(10, 21):
+    for i in range(0, x):
         ox.append(i)
-        oy.append(15)
-    for i in range(15):
-        ox.append(20)
-        oy.append(i)
-    for i in range(15, 30):
-        ox.append(30)
-        oy.append(i)
-    for i in range(16):
-        ox.append(40)
+        oy.append(y - 1)
+    for i in range(5, y):
+        ox.append(0)
         oy.append(i)
 
     # print(ox)
@@ -531,11 +557,11 @@ def design_obstacles(x, y):
 
 def main():
     print("start!")
-    x, y = 51, 31
+    x, y = 21, 13
     # 起点位置、航向角
-    sx, sy, syaw0 = 10.0, 7.0, np.deg2rad(120.0)
+    sx, sy, syaw0 = 6.0, 8.0, np.deg2rad(0.0)
     # 终点位置、航向角
-    gx, gy, gyaw0 = 45.0, 20.0, np.deg2rad(90.0)
+    gx, gy, gyaw0 = 10.0, 2.0, np.deg2rad(90.0)
 
     ox, oy = design_obstacles(x, y)
 
