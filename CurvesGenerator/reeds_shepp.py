@@ -39,6 +39,7 @@ def calc_all_paths(sx, sy, syaw, gx, gy, gyaw, maxc, step_size=STEP_SIZE):
     q0 = [sx, sy, syaw]
     q1 = [gx, gy, gyaw]
 
+    # 返回的path只有每段长度信息，没有点信息
     paths = generate_path(q0, q1, maxc)
 
     for path in paths:
